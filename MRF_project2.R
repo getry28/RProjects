@@ -11,7 +11,6 @@ library(nortest)
 library(tseries)
 library(normtest)
 
-
 #spółka WIG20 - Orange PL
 #spółka mWIG40 - GTC
 GTCMonth<-read.csv("https://raw.githubusercontent.com/getry28/RProjects/master/gtc_m.csv",
@@ -25,7 +24,6 @@ OrangeWeek<-read.csv("https://raw.githubusercontent.com/getry28/RProjects/master
 
 # Analiza tygodniowych stóp zwrotu ----------------------------------------
 
-#zadanie 1 - tygodniowe stopy zwrotu
 spolki<-c("Orange","GTC")
 TygodnioweStopyZwrotu<-matrix(0,nrow(OrangeWeek)-1,2)%>%
   as.data.frame()
@@ -65,7 +63,8 @@ adf.test(TygodnioweStopyZwrotu$GTC,alternative="stationary")
 TygodnioweStatystyki<-describe(TygodnioweStopyZwrotu%>%
                                  select(Orange:GTC))%>%
   select(-c('vars','n','mad','range','trimmed','se'))%>%
-  t()
+  t()%>%
+  round(digit=2)
 
 #wykresy pudełkowe
 ggplot(LogWeek,aes(x=as.factor(Spolka),y=StopaZwrotu))+
@@ -90,11 +89,13 @@ as.numeric(lillie.test(TygodnioweStopyZwrotu$GTC)$p.value)
 as.numeric(jb.norm.test(TygodnioweStopyZwrotu$Orange)$p.value)
 as.numeric(jb.norm.test(TygodnioweStopyZwrotu$GTC)$p.value)
 
+#wykresy gęstości
 ggplot(LogWeek,aes(x=StopaZwrotu))+
   geom_density(aes(color=Spolka),size=1.1)+
   theme_economist(dkpanel = T)+
   ggtitle("Wykresy gęstości tygodniowych logarytmicznych stóp zwrotu")
 
+#wykresy kwantyl-kwantyl
 ggplot(LogWeek,aes(sample=StopaZwrotu))+
   stat_qq(aes(color=Spolka))+
   theme_economist(dkpanel=T)+
@@ -126,23 +127,25 @@ ggplot(ACFGTCWeekdf,aes(lag,acf))+
   scale_x_continuous(breaks=seq(0,25,by=5))
 
 #test Ljung-Boxa
-LBResult<-matrix(0,5,2)%>%
+LBResultWeek<-matrix(0,5,2)%>%
   as.data.frame()
-colnames(LBResult)<-spolki
+colnames(LBResultWeek)<-spolki
 
 for(i in 1:5){
-  LBResult$Orange[i]<-Box.test(TygodnioweStopyZwrotu$Orange,type="Ljung-Box",lag = i)$p.value
-  LBResult$GTC[i]<-Box.test(TygodnioweStopyZwrotu$GTC,type="Ljung-Box",lag = i)$p.value
+  LBResultWeek$Orange[i]<-Box.test(TygodnioweStopyZwrotu$Orange,type="Ljung-Box",lag = i)$p.value
+  LBResultWeek$GTC[i]<-Box.test(TygodnioweStopyZwrotu$GTC,type="Ljung-Box",lag = i)$p.value
 }
+
+round(LBResultWeek,digit=2)
 
 # Analiza tygodniowych wolumenów obrotu -----------------------------------
 
-#własności szeregów czasowych tygodniowego wolumenu obrotu
 TygodniowyWolumen<-data.frame(OrangeWeek$Data,OrangeWeek$Wolumen,GTCWeek$Wolumen)
 colnames(TygodniowyWolumen)<-c("Data",spolki)
 TygodniowyWolumen$Data<-as.Date(TygodniowyWolumen$Data)
 
 #wykresy szeregów czasowych
+#wykres Orange
 ggplot(TygodniowyWolumen,aes(Data,Orange))+
   geom_line(colour="#4271AE",size=1.1)+
   theme_economist(dkpanel=T)+
@@ -150,6 +153,7 @@ ggplot(TygodniowyWolumen,aes(Data,Orange))+
   theme(plot.title = element_text(hjust=0.5))+
   ylab("Wartości tygodniowego wolumenu")
 
+#wykres GTC
 ggplot(TygodniowyWolumen,aes(Data,GTC))+
   geom_line(colour="#4271AE",size=1.1)+
   theme_economist(dkpanel=T)+
@@ -162,6 +166,7 @@ adf.test(TygodniowyWolumen$Orange,alternative="stationary")
 adf.test(TygodniowyWolumen$GTC,alternative = "stationary")
 
 #wykresy pudełkowe wolumenów
+#wykres Orange
 ggplot(TygodniowyWolumen,aes(y=Orange))+
   geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
                outlier.colour = "#1F3552",outlier.shape = 22)+
@@ -171,6 +176,7 @@ ggplot(TygodniowyWolumen,aes(y=Orange))+
   scale_x_discrete("Orange")+
   ylab("Wartości tygodniowego wolumenu")
 
+#wykres GTC
 ggplot(TygodniowyWolumen,aes(y=GTC))+
   geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
                outlier.colour = "#1F3552",outlier.shape = 22)+
@@ -216,14 +222,124 @@ ggplot(ACFGTCWeekWolumendf,aes(lag,acf))+
   xlab("Opóźnienia")+
   ylab("Wartości funkcji ACF")
 
+#test Ljung-Boxa
 for(i in 1:5){
   WolumenWeekDF$Orange[i]<-Box.test(TygodniowyWolumen$Orange,type="Ljung-Box",lag=i)$p.value
   WolumenWeekDF$GTC[i]<-Box.test(TygodniowyWolumen$GTC,type="Ljung-Box",lag=i)$p.value
 }
 
-
 # Analiza miesięcznych stóp zwrotu ----------------------------------------
 
+MiesieczneStopyZwrotu<-matrix(0,nrow(OrangeMonth)-1,3)%>%
+  as.data.frame()
+colnames(MiesieczneStopyZwrotu)<-c("Data",spolki)
+
+MiesieczneStopyZwrotu$Orange<-log((OrangeMonth$Zamkniecie[2:nrow(OrangeMonth)]/
+                                     OrangeMonth$Zamkniecie[1:(nrow(OrangeMonth)-1)]))
+MiesieczneStopyZwrotu$GTC<-log((GTCMonth$Zamkniecie[2:nrow(GTCMonth)]/
+                                  GTCMonth$Zamkniecie[1:(nrow(GTCMonth)-1)]))
+MiesieczneStopyZwrotu$Data<-as.Date(OrangeMonth$Data[2:nrow(OrangeMonth)])
+
+#wykresy szeregów czasowych
+LogMonth<-MiesieczneStopyZwrotu%>%
+  gather(Spolka,StopaZwrotu,Orange:GTC)
+
+#wykres Orange
+ggplot(MiesieczneStopyZwrotu,aes(x=Data,y=Orange))+
+  geom_line(size=1.1,color="#4271AE")+
+  ggtitle("Wykres miesięcznych logarytmicznych stóp zwrotu dla spółki Orange")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))
+
+#wykres GTC
+ggplot(MiesieczneStopyZwrotu,aes(x=Data,y=GTC))+
+  geom_line(color="#4271AE",size=1.1)+
+  ggtitle("Wykres miesięcznych logarytmicznych stóp zwrotu dla spółki GTC")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))
+
+#testy stacjonarności
+adf.test(MiesieczneStopyZwrotu$Orange,alternative="stationary")
+adf.test(MiesieczneStopyZwrotu$GTC,alternative="stationary")
+
+#statystyki opisowe
+MiesieczneeStatystyki<-describe(MiesieczneStopyZwrotu%>%
+                                 select(Orange:GTC))%>%
+  select(-c('vars','n','mad','range','trimmed','se'))%>%
+  t()%>%
+  round(digit=2)
+
+#wykresy pudełkowe
+ggplot(LogMonth,aes(x=as.factor(Spolka),y=StopaZwrotu))+
+  geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
+               outlier.colour = "#1F3552",outlier.shape = 22)+
+  scale_x_discrete(name="Spółka")+
+  ggtitle("Wykresy pudełkowe miesięcznych logarytmicznych stóp zwrotu")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))
+
+#test Walda-Wolfowitza na losowość
+randtests::runs.test(MiesieczneStopyZwrotu$Orange)
+randtests::runs.test(MiesieczneStopyZwrotu$GTC)
+
+#tesy normalności
+as.numeric(shapiro.test(MiesieczneStopyZwrotu$Orange)$p.value)
+as.numeric(shapiro.test(MiesieczneStopyZwrotu$GTC)$p.value)
+
+as.numeric(lillie.test(MiesieczneStopyZwrotu$Orange)$p.value)
+as.numeric(lillie.test(MiesieczneStopyZwrotu$GTC)$p.value)
+
+as.numeric(jb.norm.test(MiesieczneStopyZwrotu$Orange)$p.value)
+as.numeric(jb.norm.test(MiesieczneStopyZwrotu$GTC)$p.value)
+
+#wykresy gęstości
+ggplot(LogMonth,aes(x=StopaZwrotu))+
+  geom_density(aes(color=Spolka),size=1.1)+
+  theme_economist(dkpanel = T)+
+  ggtitle("Wykresy gęstości miesięcznych logarytmicznych stóp zwrotu")
+
+#wykresy kwantyl-kwantyl
+ggplot(LogWeek,aes(sample=StopaZwrotu))+
+  stat_qq(aes(color=Spolka))+
+  theme_economist(dkpanel=T)+
+  ggtitle("Wykresy kwantyl-kwantyl miesięcznych logarytmicznych stóp zwrotu")
+
+#testy autokorelacji
+ACFOrangeMonth<-acf(MiesieczneStopyZwrotu$Orange,plot=F)
+ACFOrangeMonthdf<-with(ACFOrangeMonth,data.frame(lag,acf))
+
+ACFGTCMonth<-acf(MiesieczneStopyZwrotu$GTC,plot=F)
+ACFGTCMonthdf<-with(ACFGTCWeek,data.frame(lag,acf))
+
+ggplot(ACFOrangeMonthdf,aes(lag,acf))+
+  geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
+  ggtitle("Korelogram logarytmicznych miesięcznych stóp zwrotu dla spółki Orange")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))+
+  xlab("Opóźnienie")+
+  ylab("Wartość funkcji ACF")+
+  scale_x_continuous(breaks=seq(0,25,by=5))
+
+ggplot(ACFGTCMonthdf,aes(lag,acf))+
+  geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
+  ggtitle("Korelogram logarytmicznych miesięcznych stóp zwrotu dla spółki GTC")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))+
+  xlab("Opóźnienie")+
+  ylab("Wartość funkcji ACF")+
+  scale_x_continuous(breaks=seq(0,25,by=5))
+
+#test Ljung-Boxa
+LBResultMonth<-matrix(0,5,2)%>%
+  as.data.frame()
+colnames(LBResultMonth)<-spolki
+
+for(i in 1:5){
+  LBResultMonth$Orange[i]<-Box.test(TygodnioweStopyZwrotu$Orange,type="Ljung-Box",lag = i)$p.value
+  LBResultMonth$GTC[i]<-Box.test(TygodnioweStopyZwrotu$GTC,type="Ljung-Box",lag = i)$p.value
+}
+
+round(LBResultMonth,digit=2)
 
 # Analiza miesięcznych wolumenów obrotu -----------------------------------
 MiesiecznyWolumen<-data.frame(OrangeMonth$Data,OrangeMonth$Wolumen,
@@ -232,6 +348,7 @@ colnames(MiesiecznyWolumen)<-c("Data",spolki)
 MiesiecznyWolumen$Data<-as.Date(MiesiecznyWolumen$Data)
 
 #wykresy szeregów czasowych
+#wykres Orange
 ggplot(MiesiecznyWolumen,aes(Data,Orange))+
   geom_line(colour="#4271AE",size=1.1)+
   theme_economist(dkpanel=T)+
@@ -239,12 +356,17 @@ ggplot(MiesiecznyWolumen,aes(Data,Orange))+
   theme(plot.title = element_text(hjust=0.5))+
   ylab("Wartości miesięczneego wolumenu")
 
+#wykres GTC
 ggplot(MiesiecznyWolumen,aes(Data,GTC))+
   geom_line(colour="#4271AE",size=1.1)+
   theme_economist(dkpanel=T)+
   ggtitle("Wykres szeregu czasowego miesięcznego wolumenu spółki GTC")+
   theme(plot.title = element_text(hjust=0.5))+
   ylab("Wartości miesięcznego wolumenu")
+
+#testy stacjonarności
+adf.test(MiesiecznyWolumen$Orange,alternative="stationary")
+adf.test(MiesiecznyWolumen$GTC,alternative = "stationary")
 
 #wykresy pudełkowe
 ggplot(MiesiecznyWolumen,aes(y=Orange))+
@@ -300,6 +422,7 @@ ggplot(ACFGTCMonthWolumendf,aes(lag,acf))+
   xlab("Opóźnienie")+
   ylab("Wartości funkcji ACF")
 
+#test Ljung-Boxa
 for(i in 1:5){
   WolumenMonthDF$Orange[i]<-Box.test(MiesiecznyWolumen$Orange,type="Ljung-Box",lag=i)$p.value
   WolumenMonthDF$GTC[i]<-Box.test(MiesiecznyWolumen$GTC,type="Ljung-Box",lag=i)$p.value
