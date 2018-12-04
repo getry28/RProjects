@@ -9,6 +9,7 @@ library(psych)
 library(randtests)
 library(nortest)
 library(tseries)
+library(normtest)
 
 
 #spółka WIG20 - Orange PL
@@ -57,13 +58,13 @@ ggplot(TygodnioweStopyZwrotu,aes(x=Data,y=GTC))+
   theme(plot.title = element_text(hjust=0.5))
 
 #testy stacjonarności
-OrangeWeekADF<-format(adf.test(TygodnioweStopyZwrotu$Orange,alternative="stationary")$p.value)
+adf.test(TygodnioweStopyZwrotu$Orange,alternative="stationary")
 adf.test(TygodnioweStopyZwrotu$GTC,alternative="stationary")
 
 #statystyki opisowe
 TygodnioweStatystyki<-describe(TygodnioweStopyZwrotu%>%
                                  select(Orange:GTC))%>%
-  select(-c('vars','n','trimmed','se'))%>%
+  select(-c('vars','n','mad','range','trimmed','se'))%>%
   t()
 
 #wykresy pudełkowe
@@ -83,8 +84,11 @@ randtests::runs.test(TygodnioweStopyZwrotu$GTC)
 as.numeric(shapiro.test(TygodnioweStopyZwrotu$Orange)$p.value)
 as.numeric(shapiro.test(TygodnioweStopyZwrotu$GTC)$p.value)
 
-lillie.test(TygodnioweStopyZwrotu$Orange)
-lillie.test(TygodnioweStopyZwrotu$GTC)
+as.numeric(lillie.test(TygodnioweStopyZwrotu$Orange)$p.value)
+as.numeric(lillie.test(TygodnioweStopyZwrotu$GTC)$p.value)
+
+as.numeric(jb.norm.test(TygodnioweStopyZwrotu$Orange)$p.value)
+as.numeric(jb.norm.test(TygodnioweStopyZwrotu$GTC)$p.value)
 
 ggplot(LogWeek,aes(x=StopaZwrotu))+
   geom_density(aes(color=Spolka),size=1.1)+
@@ -93,7 +97,7 @@ ggplot(LogWeek,aes(x=StopaZwrotu))+
 
 ggplot(LogWeek,aes(sample=StopaZwrotu))+
   stat_qq(aes(color=Spolka))+
-  theme_economist()+
+  theme_economist(dkpanel=T)+
   ggtitle("Wykresy kwantyl-kwantyl tygodniowych logarytmicznych stóp zwrotu")
 
 #testy autokorelacji
