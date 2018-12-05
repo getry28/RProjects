@@ -309,7 +309,7 @@ ACFOrangeMonth<-acf(MiesieczneStopyZwrotu$Orange,plot=F)
 ACFOrangeMonthdf<-with(ACFOrangeMonth,data.frame(lag,acf))
 
 ACFGTCMonth<-acf(MiesieczneStopyZwrotu$GTC,plot=F)
-ACFGTCMonthdf<-with(ACFGTCWeek,data.frame(lag,acf))
+ACFGTCMonthdf<-with(ACFGTCMonth,data.frame(lag,acf))
 
 ggplot(ACFOrangeMonthdf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
@@ -335,8 +335,8 @@ LBResultMonth<-matrix(0,5,2)%>%
 colnames(LBResultMonth)<-spolki
 
 for(i in 1:5){
-  LBResultMonth$Orange[i]<-Box.test(TygodnioweStopyZwrotu$Orange,type="Ljung-Box",lag = i)$p.value
-  LBResultMonth$GTC[i]<-Box.test(TygodnioweStopyZwrotu$GTC,type="Ljung-Box",lag = i)$p.value
+  LBResultMonth$Orange[i]<-Box.test(MiesieczneStopyZwrotu$Orange,type="Ljung-Box",lag = i)$p.value
+  LBResultMonth$GTC[i]<-Box.test(MiesieczneStopyZwrotu$GTC,type="Ljung-Box",lag = i)$p.value
 }
 
 round(LBResultMonth,digit=2)
