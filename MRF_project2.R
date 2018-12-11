@@ -10,6 +10,7 @@ library(randtests)
 library(nortest)
 library(tseries)
 library(normtest)
+library(ggfortify)
 
 #spółka WIG20 - Orange PL
 #spółka mWIG40 - GTC
@@ -21,6 +22,8 @@ OrangeMonth<-read.csv("https://raw.githubusercontent.com/getry28/RProjects/maste
                       header=T,sep=",")
 OrangeWeek<-read.csv("https://raw.githubusercontent.com/getry28/RProjects/master/opl_w.csv",
                      header=T,sep=",")
+
+alpha<-0.95 #poziom przedziału ufności
 
 # Analiza tygodniowych stóp zwrotu ----------------------------------------
 
@@ -104,9 +107,11 @@ ggplot(LogWeek,aes(sample=StopaZwrotu))+
 #testy autokorelacji
 ACFOrangeWeek<-acf(TygodnioweStopyZwrotu$Orange,plot=F)
 ACFOrangeWeekdf<-with(ACFOrangeWeek,data.frame(lag,acf))
+OrangeWeekCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFOrangeWeek$n.used)
 
 ACFGTCWeek<-acf(TygodnioweStopyZwrotu$GTC,plot=F)
 ACFGTCWeekdf<-with(ACFGTCWeek,data.frame(lag,acf))
+GTCWeekCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFGTCWeek$n.used)
 
 ggplot(ACFOrangeWeekdf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
@@ -115,7 +120,8 @@ ggplot(ACFOrangeWeekdf,aes(lag,acf))+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
   ylab("Wartość funkcji ACF")+
-  scale_x_continuous(breaks=seq(0,25,by=5))
+  scale_x_continuous(breaks=seq(0,25,by=5))+
+  geom_hline(yintercept=OrangeWeekCI, lty=2, col='red')
 
 ggplot(ACFGTCWeekdf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
@@ -124,7 +130,8 @@ ggplot(ACFGTCWeekdf,aes(lag,acf))+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
   ylab("Wartość funkcji ACF")+
-  scale_x_continuous(breaks=seq(0,25,by=5))
+  scale_x_continuous(breaks=seq(0,25,by=5))+
+  geom_hline(yintercept=GTCWeekCI, lty=2, col='red')
 
 #test Ljung-Boxa
 LBResultWeek<-matrix(0,5,2)%>%
@@ -166,25 +173,16 @@ adf.test(TygodniowyWolumen$Orange,alternative="stationary")
 adf.test(TygodniowyWolumen$GTC,alternative = "stationary")
 
 #wykresy pudełkowe wolumenów
-#wykres Orange
-ggplot(TygodniowyWolumen,aes(y=Orange))+
-  geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
-               outlier.colour = "#1F3552",outlier.shape = 22)+
-  theme_economist(dkpanel=T)+
-  ggtitle("Wykres pudełkowy tygodniowego wolumenu spółki Orange")+
-  theme(plot.title=element_text(hjust=0.5))+
-  scale_x_discrete("Orange")+
-  ylab("Wartości tygodniowego wolumenu")
+WolumenWeek<-TygodniowyWolumen%>%
+  gather(Spolka,Wolumen,Orange:GTC)
 
-#wykres GTC
-ggplot(TygodniowyWolumen,aes(y=GTC))+
+ggplot(WolumenWeek,aes(x=as.factor(Spolka),y=Wolumen))+
   geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
                outlier.colour = "#1F3552",outlier.shape = 22)+
-  theme_economist(dkpanel = T)+
-  ggtitle("Wykres pudełkowy tygodniowego wolumenu spółki GTC")+
-  theme(plot.title=element_text(hjust=0.5))+
-  scale_x_discrete("GTC")+
-  ylab("Wartości tygodniowego wolumenu")
+  scale_x_discrete(name="Spółka")+
+  ggtitle("Wykresy pudełkowe tygodniowych wolumenów obrotu")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))
 
 #testy zgodności z rozkładem normalnym
 ks.test(TygodniowyWolumen$Orange,"pnorm")
@@ -202,25 +200,29 @@ colnames(WolumenWeekDF)<-spolki
 #korelogramy
 ACFOrangeWeekWolumen<-acf(TygodniowyWolumen$Orange,plot=F)
 ACFOrangeWeekWolumendf<-with(ACFOrangeWeekWolumen,data.frame(lag,acf))
+OrangeWeekWolumenCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFOrangeWeekWolumen$n.used)
 
 ggplot(ACFOrangeWeekWolumendf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
-  ggtitle("Korelogram logarytmicznych tygodniowych stóp zwrotu dla spółki Orange")+
+  ggtitle("Korelogram tygodniowego wolumenu obrotu dla spółki Orange")+
   theme(plot.title = element_text(hjust=0.5))+
   theme_economist(dkpanel=T)+
   xlab("Opóźnienie")+
-  ylab("Wartości funkcji ACF")
+  ylab("Wartości funkcji ACF")+
+  geom_hline(yintercept=OrangeWeekWolumenCI, lty=2, col='red')
 
 ACFGTCWeekWolumen<-acf(TygodniowyWolumen$GTC,plot=F)
 ACFGTCWeekWolumendf<-with(ACFGTCWeekWolumen,data.frame(lag,acf))
+GTCWeekWolumenCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFGTCWeekWolumen$n.used)
 
 ggplot(ACFGTCWeekWolumendf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
-  ggtitle("Korelogram logarytmicznych tygodniowych stóp zwrotu dla spółki GTC")+
+  ggtitle("Korelogram tygodniowego wolumenu obrotu dla spółki GTC")+
   theme(plot.title = element_text(hjust=0.5))+
   theme_economist(dkpanel = T)+
   xlab("Opóźnienia")+
-  ylab("Wartości funkcji ACF")
+  ylab("Wartości funkcji ACF")+
+  geom_hline(yintercept=GTCWeekWolumenCI, lty=2, col='red')
 
 #test Ljung-Boxa
 for(i in 1:5){
@@ -307,9 +309,11 @@ ggplot(LogWeek,aes(sample=StopaZwrotu))+
 #testy autokorelacji
 ACFOrangeMonth<-acf(MiesieczneStopyZwrotu$Orange,plot=F)
 ACFOrangeMonthdf<-with(ACFOrangeMonth,data.frame(lag,acf))
+OrangeMonthCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFOrangeMonth$n.used)
 
 ACFGTCMonth<-acf(MiesieczneStopyZwrotu$GTC,plot=F)
 ACFGTCMonthdf<-with(ACFGTCMonth,data.frame(lag,acf))
+GTCMonthCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFGTCMonth$n.used)
 
 ggplot(ACFOrangeMonthdf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
@@ -318,7 +322,8 @@ ggplot(ACFOrangeMonthdf,aes(lag,acf))+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
   ylab("Wartość funkcji ACF")+
-  scale_x_continuous(breaks=seq(0,25,by=5))
+  scale_x_continuous(breaks=seq(0,25,by=5))+
+  geom_hline(yintercept=OrangeMonthCI, lty=2, col='red')
 
 ggplot(ACFGTCMonthdf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",colour="#1F3552")+
@@ -327,7 +332,8 @@ ggplot(ACFGTCMonthdf,aes(lag,acf))+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
   ylab("Wartość funkcji ACF")+
-  scale_x_continuous(breaks=seq(0,25,by=5))
+  scale_x_continuous(breaks=seq(0,25,by=5))+
+  geom_hline(yintercept=GTCMonthCI, lty=2, col='red')
 
 #test Ljung-Boxa
 LBResultMonth<-matrix(0,5,2)%>%
@@ -342,6 +348,7 @@ for(i in 1:5){
 round(LBResultMonth,digit=2)
 
 # Analiza miesięcznych wolumenów obrotu -----------------------------------
+
 MiesiecznyWolumen<-data.frame(OrangeMonth$Data,OrangeMonth$Wolumen,
                               GTCMonth$Wolumen)
 colnames(MiesiecznyWolumen)<-c("Data",spolki)
@@ -352,7 +359,7 @@ MiesiecznyWolumen$Data<-as.Date(MiesiecznyWolumen$Data)
 ggplot(MiesiecznyWolumen,aes(Data,Orange))+
   geom_line(colour="#4271AE",size=1.1)+
   theme_economist(dkpanel=T)+
-  ggtitle("Wykres szeregu czasowego miesięcznego wolumenu spółki GTC")+
+  ggtitle("Wykres szeregu czasowego miesięcznego wolumenu spółki Orange")+
   theme(plot.title = element_text(hjust=0.5))+
   ylab("Wartości miesięczneego wolumenu")
 
@@ -369,23 +376,16 @@ adf.test(MiesiecznyWolumen$Orange,alternative="stationary")
 adf.test(MiesiecznyWolumen$GTC,alternative = "stationary")
 
 #wykresy pudełkowe
-ggplot(MiesiecznyWolumen,aes(y=Orange))+
-  geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
-               outlier.colour = "#1F3552",outlier.shape = 22)+
-  theme_economist(dkpanel = T)+
-  ggtitle("Wykres pudełkowy miesięcznego wolumenu spółki Orange")+
-  theme(plot.title=element_text(hjust=0.5))+
-  scale_x_discrete("Orange")+
-  ylab("Wartości miesięcznego wolumenu")
+WolumenMonth<-MiesiecznyWolumen%>%
+  gather(Spolka,Wolumen,Orange:GTC)
 
-ggplot(MiesiecznyWolumen,aes(y=GTC))+
+ggplot(WolumenMonth,aes(x=as.factor(Spolka),y=Wolumen))+
   geom_boxplot(fill="#4271AE",colour="#1F3552",alpha=0.7,
                outlier.colour = "#1F3552",outlier.shape = 22)+
-  theme_economist(dkpanel = T)+
-  ggtitle("Wykres pudełkowy tygodniowego wolumenu spółki GTC")+
-  theme(plot.title=element_text(hjust=0.5))+
-  scale_x_discrete("GTC")+
-  ylab("Wartości miesięcznego wolumenu")
+  scale_x_discrete(name="Spółka")+
+  ggtitle("Wykresy pudełkowe tygodniowych wolumenów obrotu")+
+  theme_economist(dkpanel=T)+
+  theme(plot.title = element_text(hjust=0.5))
 
 #testy zgodności z rozkładem normalnym oraz log-normalnym
 ks.test(MiesiecznyWolumen$Orange,"pnorm")
@@ -402,25 +402,29 @@ colnames(WolumenMonthDF)<-spolki
 #korelogramy
 ACFOrangeMonthWolumen<-acf(MiesiecznyWolumen$Orange,plot=F)
 ACFOrangeMonthWolumendf<-with(ACFOrangeMonthWolumen,data.frame(lag,acf))
+OrangeMonthWolumenCI<-c(-1,1)*qnorm((1 + alpha)/2)/sqrt(ACFOrangeMonthWolumen$n.used)
 
 ggplot(ACFOrangeMonthWolumendf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",color="#1F3552")+
-  ggtitle("Korelogram miesięcznego wolumenu spółki Orange")+
+  ggtitle("Korelogram miesięcznego wolumenu obrotu dla spółki Orange")+
   theme_economist(dkpanel = T)+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
-  ylab("Wartości funkcji ACF")
+  ylab("Wartości funkcji ACF")+
+  geom_hline(yintercept=OrangeMonthWolumenCI, lty=2, col='red')
 
 ACFGTCMonthWolumen<-acf(MiesiecznyWolumen$GTC,plot=F)
 ACFGTCMonthWolumendf<-with(ACFGTCMonthWolumen,data.frame(lag,acf))
+GTCMonthWolumenCI<-c(-1,1)*qnorm((1+alpha)/2)/sqrt(ACFGTCMonthWolumen$n.used)
 
 ggplot(ACFGTCMonthWolumendf,aes(lag,acf))+
   geom_bar(stat="identity",position="identity",fill="#4271AE",color="#1F3552")+
-  ggtitle("Korelogram miesięcznego wolumenu spółki GTC")+
+  ggtitle("Korelogram miesięcznego wolumenu obrotu dla spółki GTC")+
   theme_economist(dkpanel=T)+
   theme(plot.title = element_text(hjust=0.5))+
   xlab("Opóźnienie")+
-  ylab("Wartości funkcji ACF")
+  ylab("Wartości funkcji ACF")+
+  geom_hline(yintercept=GTCMonthWolumenCI, lty=2, col='red')
 
 #test Ljung-Boxa
 for(i in 1:5){
