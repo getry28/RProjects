@@ -10,6 +10,13 @@ library(ggcorrplot)
 library(ggthemes)
 library(leaps)
 library(car)
+library(normtest)
+library(nortest)
+library(randtests)
+library(lmtest)
+library(boot)
+library(simpleboot)
+library(MASS)
 
 hellwig <- function(y, x, method="pearson")
 {
@@ -32,12 +39,11 @@ hellwig <- function(y, x, method="pearson")
               stringsAsFactors=FALSE)
 }
 
+# Data import -------------------------------------------------------------
+
 #csv data
 CarsCSV<-read.csv("https://raw.githubusercontent.com/getry28/RProjects/master/cars.csv",
                   header=T)
-
-# Data import -------------------------------------------------------------
-
 
 #data conversion
 USGallon<- 3.785411784
@@ -57,16 +63,15 @@ CarsPL$weightPL<-round(CarsPL$weightPL,digits = 0)
 CarsPL$accPL<-round(CarsPL$accPL,digits=1)
 CarsPL$mpg100PL<-round(CarsPL$mpg100PL,digits=1)
 
+# Descriptive statistics creation -----------------------------------------
+
 #descriptive statistic
 CarsDS<-describe(CarsPL%>%
                    select(-name))%>%
   select(-c('vars','n','trimmed','mad','range','se'))%>%
   mutate(CoeffVar = sd/mean)%>%
-  round(digits=3)
+  round(digits=3) 
 
-# Descriptive statistics creation -----------------------------------------
-
- 
 rownames(CarsDS)<-colnames(CarsPL %>%
                              select(-name))
 
@@ -75,6 +80,8 @@ col_order<-c("mpg100PL","name","cylinders","horsepower","year","origin",
              "dispPL","weightPL","accPL")
 
 CarsPL<-CarsPL[,col_order]
+
+# Scatterplots and correlation matrices -----------------------------------
 
 #scatterplots
 ggplot(CarsPL,aes(mpg100PL,dispPL,
@@ -87,9 +94,6 @@ ggplot(CarsPL,aes(mpg100PL,dispPL,
   ggtitle("Wykres rozrzutu objętości silnika względem spalania")+
   theme_gdocs()+
   theme(plot.title = element_text(hjust = 0.5))
-
-# Scatterplots and correlation matrices -----------------------------------
-
 
 ggplot(CarsPL,aes(mpg100PL,horsepower,
                   color=cylinders, size=origin))+
@@ -138,13 +142,113 @@ ggcorrplot(CorrMatrix,type="upper",outline.col="white",lab=T)+
   theme(plot.title=element_text(hjust=0.5))
 
 
-#Hellwig method
-CarsHellwig<-hellwig(CarsPL$mpg100PL,CarsPL %>%
-          select(cylinders:accPL),method="pearson")%>%
-  arrange(desc(h))
+# All variables regression ------------------------------------------------
+AllCarsLM<-lm(mpg100PL~cylinders+horsepower+year+origin+
+                dispPL+weightPL+accPL,CarsPL)
+
+#model diagnostic
+
+#parameters CI
+AllCarsLMCI<-confint(AllCarsLM, level=0.95)
+
+#errors
+sqrt(diag(vcov(AllCarsLM)))
+
+#selecting best model from Hellwig method by R2 and RSS
+leaps<-regsubsets(mpg100PL~cylinders+horsepower+year+origin+
+                    dispPL+weightPL+accPL,CarsPL,nbest=3)
+
+# plot a table of models showing variables in each model.
+# models are ordered by the selection statistic.
+windows()
+plot(leaps,scale="r2")
+dev.off()
+# plot statistic by residual sum of squares
+windows()
+subsets(leaps, statistic="rss")
+dev.off()
+
+#residuals diagnostic
+AllCarsLMRS<-AllCarsLM$residuals
+
+ggplot(AllCarsLM,aes(sample=AllCarsLMRS))+
+  stat_qq()+
+  stat_qq_line()
+
+ggplot(data=AllCarsLM,aes(AllCarsLMRS))+
+  geom_histogram(binwidth = 0.5, aes(y=..density.., fill=..count..))+
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(AllCarsLMRS), 
+                          sd=sd(AllCarsLMRS)))
+
+jb.norm.test(AllCarsLMRS)
+lillie.test(AllCarsLMRS)
+shapiro.test(AllCarsLMRS)
+
+#randomness test
+runs.test(AllCarsLMRS)
+
+#heteroskedasticity test
+bptest(AllCarsLM)
+
+
+# Stepwise regression -----------------------------------------------------
+StepCarsLM<-lm(mpg100PL~horsepower+year+
+                 weightPL,CarsPL)
+
+#model diagnostic
+
+#parameters CI
+StepCarsLMCI<-confint(StepCarsLM, level=0.95)
+
+#errors
+sqrt(diag(vcov(StepCarsLM)))
+
+#selecting best model from Hellwig method by R2 and RSS
+leaps<-regsubsets(mpg100PL~horsepower+year+
+                    weightPL,CarsPL,nbest=3)
+
+# plot a table of models showing variables in each model.
+# models are ordered by the selection statistic.
+windows()
+plot(leaps,scale="r2")
+dev.off()
+# plot statistic by residual sum of squares
+windows()
+subsets(leaps, statistic="rss")
+dev.off()
+
+#residuals diagnostic
+StepCarsLMRS<-StepCarsLM$residuals
+
+ggplot(StepCarsLM,aes(sample=StepCarsLMRS))+
+  stat_qq()+
+  stat_qq_line()
+
+ggplot(data=StepCarsLM,aes(StepCarsLMRS))+
+  geom_histogram(binwidth = 0.5, aes(y=..density.., fill=..count..))+
+  stat_function(fun=dnorm,
+                color="red",
+                args=list(mean=mean(StepCarsLMRS), 
+                          sd=sd(StepCarsLMRS)))
+
+jb.norm.test(StepCarsLMRS)
+lillie.test(StepCarsLMRS)
+shapiro.test(StepCarsLMRS)
+
+#randomness test
+runs.test(StepCarsLMRS)
+
+#heteroskedasticity test
+bptest(StepCarsLM)
 
 # Model with variables selected by Hellwig method -------------------------
 
+#Hellwig method
+CarsHellwig<-hellwig(CarsPL$mpg100PL,CarsPL %>%
+                       select(cylinders:accPL),method="pearson")%>%
+  arrange(desc(h))
 
 variables<-CarsHellwig$k[1]%>%
   strsplit("-")%>%
@@ -158,10 +262,14 @@ CarsHellwigLM<-lm(mpg100PL~cylinders+horsepower+
                     year+weightPL,CarsPL)
 
 #model diagnostic
+
 #CI for parameters
 CarsHellwigLMCI<-confint(CarsHellwigLM, level=0.95)
 
-#selecting best model from Hellwig method by R2 and RSQ
+#errors
+sqrt(diag(vcov(CarsHellwigLM)))
+
+#selecting best model from Hellwig method by R2 and RSS
 leaps<-regsubsets(mpg100PL~cylinders+horsepower+
                     year+weightPL,CarsPL,nbest=10)
 
@@ -170,9 +278,36 @@ leaps<-regsubsets(mpg100PL~cylinders+horsepower+
 windows()
 plot(leaps,scale="r2")
 dev.off()
-# plot statistic by subset size 
+# plot statistic by residual sum of squares
 windows()
-subsets(leaps, statistic="rsq")
+subsets(leaps, statistic="rss")
 dev.off()
+
+#residuals diagnostic
+CarsHellwigLMRS<-CarsHellwigLM$residuals
+
+ggplot(CarsHellwigLM,aes(sample=CarsHellwigLMRS))+
+  stat_qq()+
+  stat_qq_line()
+
+ggplot(data=CarsHellwigLM,aes(CarsHellwigLMRS))+
+  geom_histogram(binwidth = 0.5, aes(y=..density.., fill=..count..))+
+  stat_function(fun=dnorm,
+                  color="red",
+                  args=list(mean=mean(CarsHellwigLMRS), 
+                            sd=sd(CarsHellwigLMRS)))
+
+jb.norm.test(CarsHellwigLMRS)
+lillie.test(CarsHellwigLMRS)
+shapiro.test(CarsHellwigLMRS)
+
+#randomness test
+runs.test(CarsHellwigLMRS)
+
+#heteroskedasticity test
+bptest(CarsHellwigLM)
+
+
+# Bootstrap regression ----------------------------------------------------
 
 
