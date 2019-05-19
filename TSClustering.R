@@ -18,10 +18,6 @@ Data2017 <- read.xlsx("MAThesis_Data.xlsx", sheetIndex=4, header=TRUE)
 Data2018 <- read.xlsx("MAThesis_Data.xlsx", sheetIndex=5, header=TRUE)%>%
   na.omit()
 
-#PBG wywalić
-#do roboty: statystyki opisowe ze statystyk opisowych
-# + współczynniki autokorelacji 1-go rzędu
-
 labels<-colnames(Data2017%>%
                    select(-1))
 
@@ -89,7 +85,7 @@ boxplot(DSACF2018$mean, horizontal=T, xlab="Wartości współczynnika autokorela
 D1<-diss(Data2017%>% select(-Data),"COR")
 D1H<-hclust(D1, method="ward.D")%>%
   plot(hang=-1, cex=0.8)
-
+D1<-as.data.frame(as.matrix(D1))
 
 #AR distance
 D2<-diss(Data2017%>% select(-Data),"AR.MAH")
@@ -102,12 +98,35 @@ D3<-diss(Data2017%>% select(-c(Data,PBG)),"PER")
 D3H<-hclust(D3, method="ward.D")%>%
   plot(hang=-1, cex=0.8)
 
+#group periodograms
+#group 1
+spectrum(Data2017%>%
+           select(c(SYGNITY,INTER.SPORT,MZN.PROPERTY,OPEN.FINANCE,SKYLINE)))
+
+#group 2
+spectrum(Data2017%>%
+           select(c(ELZAB,KRAKCHEMIA,GETIN.NOBLE.BANK,INDYKPOL,JSW,MBANK,LOTOS,X11.BIT,
+                    BOS.BANK,BNP.PARIBAS,EUROTEL,CD.PROJEKT,MOSTOSTAL.WAWA)))
+
+#group 3
+spectrum(Data2017%>%
+           select(c(DOM.DEVELOPMENT,ING,PEKAO.SA,GTC,WIRTUALNA.POLSKA,DEBICA,JW.CONSTRUCTION,
+                    IDEA.BANK,ALCHEMIA,ZYWIEC,NEWAG,PRIME.CAR.MANAGEMENT,SKARBIEC.HOLDING,
+                    ASSECO,MENNICA.POLSKA,AMICA,RAWLPLUG,CYFROWY.POLSAT,MCI.CAPITAL,NETIA,
+                    PKO.BP,INTER.CARS,BANK.HANDLOWY,PZU)))
+
+#group 4
+spectrum(Data2017%>%
+           select(c(GETIN.HOLDING,ENERGA,ALIOR,ATAL,CCC,SEKO,BANK.MILLENIUM,ORLEN,PKP.CARGO,
+                    PGE,TAURON,ENEA,PGNIG,FERRO,ORANGE,K2.INTERNET,PFLEIDERER,GRUPA.AZOTY,
+                    KOMPUTRONIK,WAWEL,AGORA,COMARCH,HENRYK.KANIA,KGHM,TARCZYNSKI)))
 
 #TS clustering - 2018
 #COR distance
 D10<-diss(Data2018%>% select(-Data),"COR")
 D10H<-hclust(D10, method="ward.D")%>%
   plot(hang=-1, cex=0.8)
+
 
 #AR distance
 D11<-diss(Data2018%>% select(-Data),"AR.MAH")
@@ -120,4 +139,23 @@ D12<-diss(Data2018%>% select(-c(Data,PBG)),"PER")
 D12H<-hclust(D12, method="ward.D")%>%
   plot(hang=-1, cex=0.8)
 
+#group periodograms
+#group 1
+spectrum(Data2017%>%
+           select(c(SYGNITY,INTER.SPORT,MZN.PROPERTY,OPEN.FINANCE,SKYLINE)))
 
+#group 2
+spectrum(Data2017%>%
+           select(ELZAB,KRAKCHEMIA,GETIN.NOBLE.BANK,INDYKPOL,JSW,MBANK,LOTOS,X11.BIT,
+                  BOS.BANK,BNP.PARIBAS,EUROTEL,CD.PROJEKT,MOSTOSTAL.WAWA))
+#group 3
+spectrum(Data2017%>%
+           select(DOM.DEVELOPMENT,ING,PEKAO.SA,GTC,WIRTUALNA.POLSKA,DEBICA,JW.CONSTRUCTION,
+                  IDEA.BANK,ALCHEMIA,ZYWIEC,PRIME.CAR.MANAGEMENT,SKARBIEC.HOLDING,ASSECO,MENNICA.POLSKA,
+                  AMICA,RAWLPLUG,CYFROWY.POLSAT,MCI.CAPITAL,NETIA,PKO.BP,
+                  INTER.CARS,BANK.HANDLOWY,PZU))
+
+#group 4
+spectrum(Data2017%>%
+           select(SKYLINE,BNP.PARIBAS,MZN.PROPERTY,INTER.SPORT,HENRYK.KANIA,CD.PROJEKT,GRUPA.AZOTY,
+                  MOSTOSTAL.WAWA,X11.BIT,KRAKCHEMIA,SYGNITY,ELZAB,PRIME.CAR.MANAGEMENT))
